@@ -2,17 +2,17 @@ const { vk: { token, version } } = require('./config.json')
 const request = require('request-promise')
 const fs = require('fs').promises;
 
-
+//simple class for using api vk
 class vkApi {
     constructor() {
         this.params = {
-            'access_token': token, //токен доступа вконтакте
-            'v': version           //версия API вконтакте
+            'access_token': token, //access token for vk api
+            'v': version           //version of api
         }
     }
 
     async method(name, args) {
-        //метод, позволяющий использовать большинство api вконтакте
+        //method for request vk api
         return await request({
             uri: `https://api.vk.com/method/${name}`,
             qs: { ...this.params, ...args },
@@ -21,12 +21,12 @@ class vkApi {
     }
 
     async send(args) {
-        //Отправляет сообщение исходя из переданных параметров
+        //sending message to user
         await this.method('messages.send', args)
     }
 
     async attach(pic) {
-        //Прикрепляет изображение к сообщению
+        //attach photo to message
         const { response: { upload_url } } = await this.method('photos.getMessagesUploadServer')
         const upload = await request({
             method: 'POST',
@@ -47,7 +47,7 @@ class vkApi {
     }
 
     async getUser(id) {
-        //быстрый доступ к имени пользователя по айди пользователя
+        //find access to first name of user
         const { response: [{ first_name }] } = await this.method('users.get', {
             user_ids: id
         })

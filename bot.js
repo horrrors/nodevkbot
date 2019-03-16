@@ -18,7 +18,8 @@ const knex = require('knex')({
     connection: process.env.HEROKU_POSTGRESQL_GRAY_URL,
 });
 
-//Метод форматирования строк в Python-style
+//String method like python string.format
+//using like 'hello {0}'.format('Misha')
 String.prototype.format = function () {
     var args = arguments;
     return this.replace(/\{(\d+)\}/g, function (m, n) {
@@ -26,16 +27,15 @@ String.prototype.format = function () {
     });
 };
 
-//Метод форматирования строк, возвращает исходную строку, в которой первый символ в верхнем регистре, остальные в нижнем
+//String method like python string.capitalize
 String.prototype.capitalize = function () {
     return this.charAt(0).toUpperCase() + this.slice(1).toLowerCase();
 }
 
-//Метод массива, возвращает случайный элемент из массива
+//return random element of array
 Array.prototype.randomElement = function () {
     return this[Math.floor(Math.random() * this.length)]
 }
-
 
 
 
@@ -46,28 +46,28 @@ class Bot {
         this.suggests()
         this.suggest = []
 
-        //Каждую полночь обновляет архив скриншотов
+        //Every midnight update archive of screenshots
         new CronJob({
             cronTime: '00 00 00 * * *',
             onTick: this.screenEveryDay.bind(this),
             timeZone: 'Europe/Moscow'
         }).start();
 
-        //Каждую субботу в час дня переводит время расписания на следующую неделю
+        //every saturday at 1 P.M up week number to next
         new CronJob({
             cronTime: '00 00 13 * * 6',
             onTick: this.updateWeek.bind(this),
             timeZone: 'Europe/Moscow'
         }).start();
 
-        //Каждые пять часов проверяет изменения в расписаниях студентов, кроме субботы.
+        //every five hours checking changes in schedule, except saturday
         new CronJob({
             cronTime: '00 00 */5 * * 0-5',
             onTick: this.compareHtml.bind(this),
             timeZone: 'Europe/Moscow',
         }).start();
         
-        //Каждое воскресенье в 9 утра присылает новое расписание и прогноз
+        //every sunday in 9 A.M sending new schedule and forecast
         new CronJob({
             cronTime: '00 00 9 * * 0',
             onTick: this.everyWeek.bind(this),
@@ -76,24 +76,24 @@ class Bot {
 
     }
 
-    //рекурсивная функция для чтения пересланных сообщений
+    //recursive function for forwarded messages
     _readFwd([{ text, fwd_messages }]) {
         return !fwd_messages ? text : this._readFwd(fwd_messages)
 
     }
 
-    //удаляет обращение к боту в беседах
-    _appeal(message) {
-        return message.replace(/\[[a-z0-9|@]+]\s/, '')
-    }
+    //delete appeal for bot
+    // _appeal(message) {
+    //     return message.replace(/\[[a-z0-9|@]+]\s/, '')
+    // }
 
-    //Присылает зарегистрированному пользователю стандартную клавиатуру
+    //sending default keyboard to registred user
     async _defaultKeyboard(id) {
         if (! await this.isReg(id)) return
         return JSON.stringify(fastKeyboards.main)
     }
 
-    //Создает скриншот расписания группы, которая передается в аргументах
+    //create screenshot schedule and save in filesystem
     async _makeScreen(group, groupID, type, data) {
         const page = await this.browser.newPage();
         await page.goto(parseUrl.format(groupID, group, type, data));
@@ -107,28 +107,27 @@ class Bot {
 
     }
 
-
-    //Собирает все названия, по которым можно получить расписание, используется для подсказок при ошибках ввода
+    //collects all name from base for creating help-message on error
     suggests() {
         knex('ids').select('name').then(function (obj) { this.suggest = obj.map(sug => sug.name.toLowerCase()); }.bind(this))
     }
 
-    //Проверяет, есть ли у пользователя регистрация 
+    //checking is user registred
     async isReg(id) {
         return (await knex('rassilka').where('id', id)).length > 0
     }
 
-    //Проверяет, подписан ли пользователь на еженедельную рассылку
+    //checking is user subscribe to everyweek dispatch
     async isDispatch(id) {
         return (await knex('rassilka').first('dispatch').where('id', id)).dispatch
     }
 
-    //Проверяет, подписан ли пользователь на уведомления об изменениях в его расписании
+    //checking is user subscribe to notification about schedule changes
     async isChanges(id) {
         return (await knex('rassilka').first('changes').where('id', id)).changes
     }
 
-    //Возвращает текущий номер недели на сайте с расписанием
+    //return current number of week
     async getCurDate() {
         const { bddata, number } = await knex('dates')
             .first('bddata', 'number')
@@ -136,19 +135,19 @@ class Bot {
         return number
     }
 
-    //Обновляет номер недели, запускает функцию обновления архива скриншотов
+    //update week number at saturday and launch update archive screens
     async updateWeek() {
         await knex('dates').update('number', await this.getCurDate() + 1).where('name', 'bddatanow')
         await this.screenEveryDay()
     }
 
-    //Делает скриншот и записывает его бинарный вид в базу
+    //making screenshot and insert his bytes in bd
     async screenIntoBd(group, id, type) {
         await this._makeScreen(group, id, type, await this.getCurDate())
         await knex('ids').update('bytes', await fs.readFile(`${group}.png`)).where('name', group)
     }
 
-    //Отправляет пользователю запрошенное расписание, в случае ошибки переадрессует дальше
+    //send screenshot from bd
     async sendFromBd(id, message, text) {
         try {
             const { bytes } = await knex('ids').first('bytes').where('name', message)
@@ -163,10 +162,9 @@ class Bot {
         } catch (error) {
             await this.sendOtherWeeks(id, message)
         }
-
     }
 
-     //Еженедельная рассылка
+     //dispatch schedule every week
      async everyWeek() {
         for (const { id: userID, grupa } of await knex('rassilka').select('id', 'grupa').where('dispatch', true)) {
             // const { id: groupID, type } = await knex('ids').first('id', 'type', 'html').where('name', grupa)
@@ -174,7 +172,7 @@ class Bot {
         }
     }
 
-    //Отправляет пользователю скриншот расписания недели по сдвигу, который он указал, например Вм-ивт-4-1 +1 
+    //sending other week schedule like 'Вм-ивт-4-1 +1'
     async sendOtherWeeks(id, message) {
         const [group, changer] = message.split(' ')
         const digit = parseInt(changer)
@@ -183,7 +181,7 @@ class Bot {
         } else await this.makeError(id, message)
     }
 
-    //Составляет пользователю сообщение об ошибке, старается подобрать похожие имена
+    //making error message and try to insert help-message into it
     async makeError(id, message) {
         let localSuggest = difflib.getCloseMatches(message.toLowerCase(), this.suggest, 5, 0.4)
         localSuggest = localSuggest.map(sug => sug.capitalize()).join('\n')
@@ -195,7 +193,7 @@ class Bot {
         })
     }
 
-    //Создает новый скриншот расписания
+    //sending new screenshot of schedule
     async deliveryScreenshot(id, grupa, data) {
         if (!data) data = await this.getCurDate()
         const username = await this.vk.getUser(id)
@@ -209,7 +207,7 @@ class Bot {
         })
     }
 
-    //Отправляет зарегистрированному пользователю расписание группы, под которой он зарегистрирован
+    //get user group from bd and send schedule this group for this user
     async sendMyRasp(id) {
         if (! await this.isReg(id)) {
             this.vk.send({
@@ -223,7 +221,7 @@ class Bot {
         await this.sendFromBd(id, grupa)
     }
 
-    //Отправляет зарегистрированному пользователю обновленное расписание его группы
+    //get user group from bd and send new screenshot schedule for this user
     async sendNew(id) {
         if (! await this.isReg(id)) {
             await this.vk.send({
@@ -237,7 +235,7 @@ class Bot {
         await this.deliveryScreenshot(id, grupa)
     }
 
-    //Функция для архивации скриншотов всех названий в базе
+    //every midnight update archive of screenshots
     async screenEveryDay() {
         for (const { name, id, type } of await knex('ids').select()) {
             this.makeHtml(name, id, type)
@@ -245,7 +243,7 @@ class Bot {
         }
     }
 
-    //Регистрирует пользователя под его группой
+    //registration user
     async regUser(id, message) {
         const grupa = message.split(' ')[1].capitalize()
 
@@ -274,7 +272,7 @@ class Bot {
         }
     }
 
-    //Удаляет пользователя из бд
+    //unregister user
     async deleteRegistration(id) {
         await knex('rassilka').where('id', id).del()
         this.vk.send({
@@ -284,7 +282,7 @@ class Bot {
         })
     }
 
-    //Присылает зарегистрированному пользователю клавиатуру с настройками
+    //send settings for registred user
     async sendSettingsKeyboard(id) {
         if (! await this.isReg(id)) return
 
@@ -306,7 +304,7 @@ class Bot {
 
     }
 
-    //Присылает зарегистрированному пользователю клавиатуру с выбором недель отличных от текущей
+    //sending other weeks keyboard for registred user
     async sendOtherWeeksKeyboard(id) {
         if (! await this.isReg(id)) return
 
@@ -329,7 +327,7 @@ class Bot {
         })
     }
 
-    //Присылает зарегистрированному пользователю стандартную клавиатуру
+    //sending default keyboard for registred user
     async sendDefaultKeyboard(id) {
         await this.vk.send({
             peer_id: id,
@@ -338,7 +336,7 @@ class Bot {
         })
     }
 
-    //Подписывает на еженедельную рассылку
+    //subscribe to everyweek schedule dispatch
     async dispatchTrue(id) {
         if (! await this.isReg(id)) {
             await this.vk.send({
@@ -357,7 +355,7 @@ class Bot {
         }
     }
 
-    //Отписывает от еженедельной рассылки
+    //unsubcribe from everyweek schedule dispatch
     async dispatchFalse(id) {
         if (! await this.isReg(id)) {
             await this.vk.send({
@@ -376,7 +374,7 @@ class Bot {
         }
     }
 
-    //Подписывает на уведомления об изменениях в расписании
+    //subscribe to notification about changes in schedule
     async changesTrue(id) {
         if (! await this.isReg(id)) {
             await this.vk.send({
@@ -395,7 +393,7 @@ class Bot {
         }
     }
 
-    //Отпсиывает от уведомлений об изменениях в расписании
+    //unsubscribe from notification about changes in schedule
     async changesFalse(id) {
         if (! await this.isReg(id)) {
             await this.vk.send({
@@ -415,13 +413,13 @@ class Bot {
         }
     }
 
-    //Обновляет в базе hmtl группы
+    //update html schedule
     async makeHtml(group, id, type) {
         const html = await this.requestHtml(id, group, type, await this.getCurDate())
         await knex('ids').update('html', html).where('name', group)
     }
 
-    //Возвращает Html расписания запрошенной группы
+    //making request and return html
     async requestHtml(Searchid, SearchString, Type, Weekid) {
         return HTMLParser.parse(await request({
             uri: 'http://www.it-institut.ru/Raspisanie/SearchedRaspisanie',
@@ -435,7 +433,7 @@ class Bot {
         })).querySelector('.table').structuredText
     }
 
-    //Сравнивает изменения в расписании пользователей
+    //find difference between html and send notification about this
     async compareHtml() {
         const changed = {}
 
@@ -458,7 +456,7 @@ class Bot {
             await knex('ids').update('html', changed[key]).where('name', key)
     }
 
-    //Составляет прогноз погоды для студентов Армавирского Государственного Педагогического Университета :)
+    //Making forecast for three days for students AGPU
     async forecast() {
         const response = await request({
             uri: weatherUrl,
@@ -482,14 +480,14 @@ class Bot {
         )
     }
 
-    //Является ли сообщение милым
+    //is message is cute
     isCute(message) {
         const cuteList = ["❤", "💜", "🖤", "Спасибо", "спасибо"]
         for (const ohCute of cuteList) if (message.indexOf(ohCute) != -1) return true
         return false
     }
 
-    //милый ответ
+    //cute send for cute message
     async sendCute(peer_id) {
         await this.vk.send({
             peer_id,
@@ -498,7 +496,7 @@ class Bot {
         })
     }
 
-    //Получает личное сообщение и выбирает необходимый путь обработки
+    //handle message and choose way for 
     async handler({ object: { peer_id, text, fwd_messages } }) {
         const message = fwd_messages.length ? this._readFwd(fwd_messages).capitalize() : text.capitalize()
 
