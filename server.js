@@ -4,7 +4,7 @@ const puppeteer = require('puppeteer');
 
 (async () => {
     try {
-        //Создание единого объекта браузера для последующего использования
+        //create object of browser for ram economy
         const browser = await puppeteer.launch(
             {
                 args: ['--no-sandbox',
