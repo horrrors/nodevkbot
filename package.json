@@ -1,0 +1,26 @@
+{
+  "name": "nodevkbot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^5.14.1"
+  },
+  "dependencies": {
+    "cron": "^1.6.0",
+    "difflib": "^0.2.4",
+    "fastify": "^2.0.0",
+    "knex": "^0.16.3",
+    "node-html-parser": "^1.1.12",
+    "pg": "^7.8.1",
+    "puppeteer": "^1.12.2",
+    "request": "^2.88.0",
+    "request-promise": "^4.2.4"
+  }
+}
