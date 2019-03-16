@@ -6,8 +6,8 @@ I did not think of anything better than chat-bot vk.com
 This bot can:
 1) Save screenshots in database as archive
 2) send to students screenshot their schedule from archive or make new
-3)Every sunday sending to students screenshot their next week schedule
-4)Cheking for updates in schedule and notify student about this
+3) Every sunday sending to students screenshot their next week schedule
+4) Cheking for updates in schedule and notify student about this
 
 Technology which was used:
 api vk and callback api 
