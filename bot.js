@@ -1,6 +1,13 @@
 const vkApi = require('./vk-api');
 const CronJob = require('cron').CronJob;
-const { parseUrl, keyboard, button, fastKeyboards, fastButtons, fastStrings, weatherApi: { weatherUrl, weatherKey, weatherText } } = require('./config.json')
+const { parseUrl, 
+        keyboard, 
+        button, 
+        fastKeyboards, 
+        fastButtons, 
+        fastStrings, 
+        weatherApi: { weatherUrl, weatherKey, weatherText } 
+    } = require('./config.json')
 const fs = require('fs').promises;
 const difflib = require('difflib');
 const request = require('request-promise');
@@ -537,13 +544,3 @@ class Bot {
 }
 
 module.exports = Bot
-
-
-
-
-
-
-
-
-
-
